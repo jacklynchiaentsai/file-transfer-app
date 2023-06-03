@@ -1,0 +1,169 @@
+Note: '$' is used to signify the start of a command line input
+
+COMMAND LINE ERROR CHECKING
+-----------------------------
+1. Undefined mode
+$ python FileApp.py -m
+>>> [ERROR: Undefined mode]
+
+2. Invalid port (not an int) -> implemented for both client and server mode port arguments
+$ python FileApp.py -s asfnsjdf
+>>> [ERROR: Port number not an integer]
+
+3. Invalid port (out of range) -> implemented for both client and server mode port arguments
+$ python FileApp.py -s 123156
+>>> [ERROR: Port number out of range]
+
+4. Incorrect number of arguments -> implemented for both client and server mode 
+$ python FileApp.py -c nickname
+>>> [ERROR: Incorrect Number of Arguments]
+
+5. Invalid IP Address format
+$ python FileApp.py -c nickname 268.0.0 2000 3001 3002
+>>> [ERROR: Invalid IP Address]
+
+6. Port already used -> implemented for both client and server mode
+$ python FileApp.py -c B 127.0.0.1 2000 3001 4002
+>>> [ERROR: Failed building UDP Socket - already used port.]
+
+7. check if server is started before client
+[server mode not started]
+$  python FileApp.py -c A 127.0.0.1 2000 4001 4002
+>>> [ERROR: specified FileApp server does not exist.]
+
+REGISTRATION
+-------------
+1. Client successfully registers with an available username.
+3. Upon successful registration, client's local table is initialized
+$ python FileApp.py -c A 127.0.0.1 2000 3001 3002
+>>> [Welcome, You are registered.]
+>>> >>> [Client table updated.]
+
+2. Server rejects registration request with a username already taken by another client.
+Client 1:
+$ python FileApp.py -c A 127.0.0.1 2000 3001 3002
+[OUPUT OMITTED]
+Client 2:
+$ python FileApp.py -c A 127.0.0.1 2000 4001 4002
+>>> [ERROR: Registration rejected. Username already taken.]
+
+4. Server retries sending the table of offered files a maximum of 2 times when the client ack is not received within 500ms
+(implemented with no console output, tested succesfully when implementing this)
+
+FILE OFFERING
+---------------
+# setdir
+1. works as stated in the specification (./testdir is a directory I set up for testing)
+$ >>> setdir ./testdir
+>>> [Successfully set ./testdir as the directory for searching offered files.]
+>>>
+
+2. given an invalid directory, the client program doesn't crash and an approproate error message is printed
+$ >>> setdir ./unexistantdir
+>>> [setdir failed: ./unexistantdir does not exist.]
+>>>
+
+3. offer command should fail with an appropriate error message if no setdir command has succeeded
+$ >>> offer bar.out
+>>> [ERROR: attempt to offer file before issuing setdir command.]
+
+#offer
+4. offer works for single and multiple filename arguments
+5. server broadcasts on new offered files by client work
+$ >>> offer bar.out foo.txt orologo.png
+>>> [Client table updated.]
+>>> [Offer Message received by Server.]
+
+6. offering a file that does not exist
+$ >>> offer boo.txt
+>>> [ERROR: cannot offer ./testdir/boo.txt. File does not exist.]
+
+FILE LISTING
+--------------
+1. listing the correct file offerings using the table (with proper formatting)
+$ >>> list
+FILENAME OWNER IP ADDRESS TCP PORT
+bar.out  A     127.0.0.1  3002
+foo.txt  A     127.0.0.1  3002
+
+2. proper message when no files are being offered
+$ >>> list
+>>> [No files available for download at the moment.]
+
+3. file updated when client table updated
+>>> [Client table updated.]
+$ >>> list
+FILENAME OWNER IP ADDRESS TCP PORT
+bar.out  A     127.0.0.1  3002
+baz.out  B     127.0.0.1  4002
+foo.txt  A     127.0.0.1  3002
+foo.txt  B     127.0.0.1  4002
+
+FILE TRANSFER
+---------------
+1. client can successfully request and receive a file offered by another client.
+(tested successfully)
+
+2. Appropriate status messages should be printed at critical points of the file transfer.
+Client B:
+$ >>> request foo.txt A
+< Connection with client A established. >
+< Downloading foo.txt... >
+< foo.txt downloaded successfully! >
+< Connection with client A closed. >
+Client A:
+< Accepting connection request from 127.0.0.1. >
+< Transferring orologo.png... >
+< orologo.png transferred successfully! >
+< Connection with client B closed. >
+< Accepting connection request from 127.0.0.1. >
+< Transferring foo.txt... >
+< foo.txt transferred successfully! >
+< Connection with client B closed. >
+
+3. An appropriate error message should be printed when the client tries to request non-existent file or file from an incorrect client.
+$ list
+FILENAME    OWNER IP ADDRESS TCP PORT
+bar.out     A     127.0.0.1  3002
+foo.txt     A     127.0.0.1  3002
+$ >>> request baz.out A
+< Invalid Request >
+
+4. Cannot request file from client itself
+$ >>> request foo.txt B
+< Invalid Request >
+
+DE-REGISTRATION
+----------------
+1. attempt to dereg a client other than itself
+client C:
+$ >>> dereg A
+>>> [ERROR: cannot deregister a client other than itself (C)]
+>>>
+
+2. dereg command de-registers the client without exiting the client program
+$ >>> dereg C
+>>> [You are Offline. Bye.]
+>>>
+
+3. when a client dereg'ed after offering files the server should broadcast the updated table of offered diles to other clients...
+clients A and B:
+>>> [Client table updated.]
+
+4. after successful dereg the client side shouldn't send anything to the server when those commands are typed in
+[successful dereg]
+$ >>> setdir ./testdir
+>>> [Action Failed: Client is deregistered.]
+
+5. if client doesn't receive ack from server client should retry for 2 times and if fail all 3 times should display error message
+[testing by closing server]
+$ >>> dereg A
+>>> [Server not responding]
+>>> [Exiting]
+
+CLIENT INPUT ERROR CHECKING
+-----------------------------
+1. not implemented client feature
+$ >>> dereagsf asff
+>>> [ERROR: action dereagsf is not implemented]
+>>>
